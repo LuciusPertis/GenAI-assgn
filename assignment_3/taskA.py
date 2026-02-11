@@ -166,7 +166,12 @@ def recommend_songs(model, song_title, top_n=5):
         for rank, (song, score) in enumerate(recommendations, 1):
             print(f"{rank}. {song} (Similarity: {score:.4f})")
     except KeyError:
-        print(f"Error: '{song_title}' was not found in the training data.")
+        print(f"Error: '{song_title}' was not found in the training data. Did you mean one of these?")
+        # Show song names containing the input as substring
+        candidates = [song for song in model.wv.index_to_key if song_title.lower() in song.lower()]
+        for candidate in candidates:
+            print(f"  - {candidate}")
+        
 
 def main():
     # 1. Prepare Data
@@ -202,3 +207,40 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+"""
+    OUTPUT:
+
+    Enter a song name to get recommendations (or 'q' to quit): Faint
+
+    --- Recommendations for 'Faint' ---
+    Error: 'Faint' was not found in the training data. Did you mean one of these?
+    - Faint - Linkin Park
+
+    Enter a song name to get recommendations (or 'q' to quit): Faint - Linkin Park
+
+    --- Recommendations for 'Faint - Linkin Park' ---
+    1. Remedy - Seether (Similarity: 0.9793)
+    2. Sabotage - The Beastie Boys (Similarity: 0.9793)
+    3. Crawling - Linkin Park (Similarity: 0.9778)
+    4. BYOB - System Of A Down (Similarity: 0.9765)
+    5. So Far Away - Staind (Similarity: 0.9763)
+
+    Enter a song name to get recommendations (or 'q' to quit): So Far
+
+    --- Recommendations for 'So Far' ---
+    Error: 'So Far' was not found in the training data. Did you mean one of these?
+    - So Far Gone - J Boog
+    - If Heaven Wasn't So Far Away - Justin Moore
+    - So Far Away - Staind
+
+    Enter a song name to get recommendations (or 'q' to quit): So Far Away - Staind
+
+    --- Recommendations for 'So Far Away - Staind' ---
+    1. Fine Again - Seether (Similarity: 0.9845)
+    2. She Hates Me - Puddle Of Mudd (Similarity: 0.9843)
+    3. Remedy - Seether (Similarity: 0.9837)
+    4. Little Things - Bush (Similarity: 0.9826)
+    5. Through Glass - Stone Sour (Similarity: 0.9805)
+
+"""
