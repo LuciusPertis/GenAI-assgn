@@ -288,3 +288,120 @@ plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
 plt.show()
+
+
+
+# Experiments
+
+import tensorflow as tf
+from tensorflow.keras import layers, models, optimizers
+import matplotlib.pyplot as plt
+import numpy as np
+
+# fresh load
+def load_data():
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    # Expand dims to (28, 28, 1) and normalize
+    x_train = np.expand_dims(x_train.astype('float32') / 255.0, -1)
+    x_test = np.expand_dims(x_test.astype('float32') / 255.0, -1)
+    # One-hot encoding
+    y_train = tf.keras.utils.to_categorical(y_train, 10)
+    y_test = tf.keras.utils.to_categorical(y_test, 10)
+    return x_train, y_train, x_test, y_test
+
+x_train, y_train, x_test, y_test = load_data()
+
+# -------------
+## -------------
+def build_cnn(conv_filters=[32, 64], dense_units=[64],
+              activation='relu', dropout=0.0, batch_norm=False):
+    model = models.Sequential()
+    model.add(layers.Input(shape=(28, 28, 1)))
+
+    # Convolutional Blocks
+    for filters in conv_filters:
+        model.add(layers.Conv2D(filters, (3, 3), padding='same'))
+        if batch_norm: model.add(layers.BatchNormalization())
+        model.add(layers.Activation(activation))
+        model.add(layers.MaxPooling2D((2, 2)))
+        if dropout > 0: model.add(layers.Dropout(dropout))
+
+    # Fully Connected Blocks
+    model.add(layers.Flatten())
+    for units in dense_units:
+        model.add(layers.Dense(units))
+        if batch_norm: model.add(layers.BatchNormalization())
+        model.add(layers.Activation(activation))
+        if dropout > 0: model.add(layers.Dropout(dropout))
+
+    model.add(layers.Dense(10, activation='softmax'))
+    return model
+
+# diff exp for diff models
+def run_experiment(name, params, optimizer, batch_size=64):
+    print(f"Running: {name}")
+    model = build_cnn(**params)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+
+    history = model.fit(x_train, y_train, epochs=10, batch_size=batch_size,
+                        validation_split=0.1, verbose=0) # verbose=0 for cleaner output
+
+    val_acc = history.history['val_accuracy']
+    return val_acc
+
+# ================================
+results = {}
+
+# Experiment A: Baseline (Simple Arch, ReLU, Adam)
+results['Baseline'] = run_experiment(
+    "Baseline",
+    {'conv_filters': [32], 'dense_units': [64], 'activation': 'relu'},
+    optimizers.Adam(learning_rate=0.001)
+)
+
+# Experiment B: Architecture Change (Deeper Network)
+results['Deep Arch'] = run_experiment(
+    "Deep Arch (32-64-128)",
+    {'conv_filters': [32, 64, 128], 'dense_units': [128], 'activation': 'relu'},
+    optimizers.Adam(learning_rate=0.001)
+)
+
+# Experiment C: Activation (Tanh)
+results['Tanh Activation'] = run_experiment(
+    "Tanh Activation",
+    {'conv_filters': [32, 64], 'dense_units': [64], 'activation': 'tanh'},
+    optimizers.Adam(learning_rate=0.001)
+)
+
+# Experiment D: Regularization (Dropout + BatchNorm)
+results['Dropout + BatchNorm'] = run_experiment(
+    "Dropout(0.25) + BN",
+    {'conv_filters': [32, 64], 'dense_units': [64], 'dropout': 0.25, 'batch_norm': True},
+    optimizers.Adam(learning_rate=0.001)
+)
+
+# Experiment E: Different Optimizers (RMSprop vs AdaGrad)
+results['RMSprop'] = run_experiment(
+    "RMSprop (lr=0.001)",
+    {'conv_filters': [32], 'dense_units': [64]},
+    optimizers.RMSprop(learning_rate=0.001)
+)
+results['AdaGrad'] = run_experiment(
+    "AdaGrad (lr=0.01)",
+    {'conv_filters': [32], 'dense_units': [64]},
+    optimizers.Adagrad(learning_rate=0.01)
+)
+
+# ==========================================
+# ==========================================
+plt.figure(figsize=(12, 8))
+for name, history in results.items():
+    plt.plot(history, label=name, linewidth=2)
+
+plt.title('Experiment Evaluation: Validation Accuracy over 10 Epochs')
+plt.xlabel('Epochs')
+plt.ylabel('Validation Accuracy')
+plt.grid(True, alpha=0.3)
+plt.legend()
+plt.show()
+
